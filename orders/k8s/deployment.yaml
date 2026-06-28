@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+
+kind: Deployment
+
+
+metadata:
+
+ name: orders
+
+ namespace: microservices
+
+
+
+spec:
+
+ replicas:2
+
+
+ selector:
+
+  matchLabels:
+
+   app: orders
+
+
+
+ template:
+
+
+  metadata:
+
+
+   labels:
+
+
+    app: orders
+
+
+
+  spec:
+
+
+   imagePullSecrets:
+
+
+   - name: jfrog-secret
+
+
+
+   containers:
+
+
+   - name: orders
+
+
+     image: mycompany.jfrog.io/docker-local/orders:latest
+
+
+
+     ports:
+
+
+     - containerPort:3003
