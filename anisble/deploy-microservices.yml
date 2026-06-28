@@ -1,0 +1,99 @@
+---
+- hosts: eks_controller
+  become: yes
+
+  vars:
+
+    aws_region: us-east-1
+
+    eks_cluster: my-eks-cluster
+
+    namespace: microservices
+
+    registry: mycompany.jfrog.io/docker-local
+
+    microservice: "{{ microservice }}"
+
+    build_number: "{{ BUILD_NUMBER }}"
+
+
+  tasks:
+
+
+    - name: Configure AWS EKS kubeconfig
+      shell: |
+
+        aws eks update-kubeconfig \
+        --region {{ aws_region }} \
+        --name {{ eks_cluster }}
+
+
+
+    - name: Create Kubernetes namespace
+      shell: |
+
+        kubectl create namespace {{ namespace }}
+
+      ignore_errors: yes
+
+
+
+
+    - name: Create JFrog image pull secret
+      shell: |
+
+        kubectl create secret docker-registry jfrog-secret \
+        --docker-server=mycompany.jfrog.io \
+        --docker-username={{ jfrog_username }} \
+        --docker-password={{ jfrog_password }} \
+        -n {{ namespace }}
+
+      ignore_errors: yes
+
+
+
+
+
+    - name: Update image in deployment
+      shell: |
+
+        kubectl set image deployment/{{ microservice }} \
+        {{ microservice }}={{ registry }}/{{ microservice }}:{{ build_number }} \
+        -n {{ namespace }}
+
+
+
+
+    - name: Apply Kubernetes deployment
+      shell: |
+
+        kubectl apply \
+        -f {{ microservice }}/k8s/deployment.yaml \
+        -n {{ namespace }}
+
+
+
+    - name: Apply Kubernetes service
+      shell: |
+
+        kubectl apply \
+        -f {{ microservice }}/k8s/service.yaml \
+        -n {{ namespace }}
+
+
+
+
+    - name: Restart deployment
+      shell: |
+
+        kubectl rollout restart deployment/{{ microservice }} \
+        -n {{ namespace }}
+
+
+
+
+    - name: Check deployment status
+      shell: |
+
+        kubectl rollout status deployment/{{ microservice }} \
+        -n {{ namespace }}
