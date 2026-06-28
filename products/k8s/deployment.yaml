@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+
+kind: Deployment
+
+
+metadata:
+
+ name: products
+
+ namespace: microservices
+
+
+
+spec:
+
+ replicas:2
+
+
+ selector:
+
+  matchLabels:
+
+   app: products
+
+
+
+ template:
+
+  metadata:
+
+   labels:
+
+    app: products
+
+
+
+  spec:
+
+
+   imagePullSecrets:
+
+
+   - name: jfrog-secret
+
+
+
+   containers:
+
+
+   - name: products
+
+
+     image: mycompany.jfrog.io/docker-local/products:latest
+
+
+
+     ports:
+
+
+     - containerPort:3002
