@@ -638,7 +638,5 @@ Kubernetes orchestration
 AWS cloud deployment
 
 # End-to-End Flow
-```
 GitHub → Jenkins → SonarQube → Docker → JFrog → AWS EKS
-
 ```
