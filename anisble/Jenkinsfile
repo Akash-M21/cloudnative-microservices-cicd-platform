@@ -1,0 +1,320 @@
+pipeline {
+
+
+agent any
+
+
+
+parameters {
+
+
+choice(
+
+name:'SERVICE',
+
+choices:[
+
+'all',
+
+'api-gateway',
+
+'users',
+
+'products',
+
+'orders',
+
+'payments'
+
+],
+
+description:'Select service'
+
+)
+
+
+}
+
+
+
+
+environment {
+
+
+REGISTRY="mycompany.jfrog.io/docker-local"
+
+
+JFROG_CREDS="jfrog-creds"
+
+
+}
+
+
+
+stages {
+
+
+
+stage('Checkout') {
+
+
+steps {
+
+
+git branch:'main',
+
+url:'https://github.com/<username>/cloudnative-microservices-cicd-platform.git'
+
+
+}
+
+}
+
+
+
+
+
+stage('SonarQube Scan') {
+
+
+steps {
+
+
+withSonarQubeEnv('sonarqube'){
+
+
+sh """
+
+sonar-scanner \
+
+-Dsonar.projectKey=microservices \
+
+-Dsonar.sources=.
+
+
+"""
+
+
+}
+
+
+}
+
+
+}
+
+
+
+
+
+stage('Docker Build') {
+
+
+steps {
+
+
+script {
+
+
+
+def services=params.SERVICE=='all'?
+
+
+[
+
+'api-gateway',
+
+'users',
+
+'products',
+
+'orders',
+
+'payments'
+
+]
+
+
+:
+
+[params.SERVICE]
+
+
+
+
+
+services.each{
+
+
+service ->
+
+
+docker.build(
+
+"${REGISTRY}/${service}:${BUILD_NUMBER}",
+
+"./${service}"
+
+)
+
+
+}
+
+
+}
+
+
+}
+
+}
+
+
+
+
+stage('Push Image') {
+
+
+steps {
+
+
+script {
+
+
+
+docker.withRegistry(
+
+"https://${REGISTRY}",
+
+JFROG_CREDS
+
+){
+
+
+
+def services=params.SERVICE=='all'?
+
+
+[
+
+'api-gateway',
+
+'users',
+
+'products',
+
+'orders',
+
+'payments'
+
+]
+
+
+:
+
+[params.SERVICE]
+
+
+
+
+
+services.each{
+
+
+service ->
+
+
+docker.image(
+
+"${REGISTRY}/${service}:${BUILD_NUMBER}"
+
+).push()
+
+
+}
+
+
+}
+
+
+}
+
+
+}
+
+
+}
+
+
+
+
+stage('Deploy Using Ansible') {
+
+
+steps {
+
+
+ansiblePlaybook(
+
+playbook:
+
+"ansible/deploy.yml",
+
+
+inventory:
+
+"ansible/hosts.ini",
+
+
+extraVars:[
+
+
+microservice:"${SERVICE}",
+
+
+build_number:"${BUILD_NUMBER}",
+
+
+jfrog_username:"${JFROG_USER}",
+
+
+jfrog_password:"${JFROG_PASS}"
+
+
+]
+
+)
+
+
+}
+
+
+}
+
+
+}
+
+
+
+post {
+
+
+success {
+
+
+echo "Deployment Completed"
+
+}
+
+
+
+failure {
+
+
+echo "Deployment Failed"
+
+}
+
+
+}
+
+}
