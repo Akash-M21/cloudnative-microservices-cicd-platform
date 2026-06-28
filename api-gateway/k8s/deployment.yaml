@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+
+kind: Deployment
+
+
+metadata:
+
+  name: api-gateway
+
+  namespace: microservices
+
+
+
+spec:
+
+  replicas: 2
+
+
+  selector:
+
+    matchLabels:
+
+      app: api-gateway
+
+
+
+  template:
+
+
+    metadata:
+
+
+      labels:
+
+
+        app: api-gateway
+
+
+
+    spec:
+
+
+      imagePullSecrets:
+
+
+      - name: jfrog-secret
+
+
+
+      containers:
+
+
+      - name: api-gateway
+
+
+        image: mycompany.jfrog.io/docker-local/api-gateway:latest
+
+
+
+        ports:
+
+
+        - containerPort: 8080
+
+
+
+        resources:
+
+
+          requests:
+
+
+            cpu: "100m"
+
+            memory: "128Mi"
+
+
+
+          limits:
+
+
+            cpu: "500m"
+
+            memory: "512Mi"
