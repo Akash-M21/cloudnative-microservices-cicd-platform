@@ -630,7 +630,7 @@ Production Application
 # Project Outcome
 
 This project demonstrates a complete cloud-native CI/CD implementation with:
-
+```
 Automated software delivery
 Containerized microservices
 Secure artifact management
@@ -638,8 +638,7 @@ Kubernetes orchestration
 AWS cloud deployment
 
 # End-to-End Flow
-
+```
 GitHub → Jenkins → SonarQube → Docker → JFrog → AWS EKS
 
-```
 ```
