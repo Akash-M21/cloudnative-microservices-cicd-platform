@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+
+kind: Deployment
+
+
+metadata:
+
+ name: payments
+
+ namespace: microservices
+
+
+
+spec:
+
+ replicas:2
+
+
+ selector:
+
+  matchLabels:
+
+   app: payments
+
+
+
+ template:
+
+
+  metadata:
+
+
+   labels:
+
+
+    app: payments
+
+
+
+  spec:
+
+
+   imagePullSecrets:
+
+
+   - name: jfrog-secret
+
+
+
+   containers:
+
+
+   - name: payments
+
+
+     image: mycompany.jfrog.io/docker-local/payments:latest
+
+
+
+     ports:
+
+
+     - containerPort:3004
