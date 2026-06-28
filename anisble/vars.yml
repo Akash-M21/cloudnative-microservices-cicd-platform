@@ -1,0 +1,7 @@
+aws_region: us-east-1
+
+eks_cluster: my-eks-cluster
+
+namespace: microservices
+
+registry: mycompany.jfrog.io/docker-local
