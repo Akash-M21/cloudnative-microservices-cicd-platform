@@ -1,18 +1,20 @@
 {
-"name":"users-service",
+  "name": "users-service",
+  "version": "1.0.0",
+  "description": "Users Microservice",
 
-"version":"1.0.0",
+  "main": "server.js",
 
-"scripts":{
+  "scripts": {
 
-"start":"node server.js"
+    "start":"node server.js"
 
-},
+  },
 
-"dependencies":{
 
-"express":"^4.19.2"
+  "dependencies": {
 
-}
+    "express":"^4.19.2"
 
+  }
 }
