@@ -53,7 +53,7 @@ spec:
    - name: payments
 
 
-     image: mycompany.jfrog.io/docker-local/payments:latest
+     image: hiqode01.jfrog.io/akash-docker/payments:latest
 
 
 
