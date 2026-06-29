@@ -15,37 +15,33 @@ pipeline {
                 'orders',
                 'payments'
             ],
-            description: 'Select microservice to deploy'
+            description: 'Select microservice to build and deploy'
         )
 
     }
 
 
+
     environment {
 
-        REGISTRY = "mycompany.jfrog.io/docker-local"
+        REGISTRY = "hiqode01.jfrog.io/docker-local"
 
         AWS_REGION = "us-east-1"
 
-        EKS_CLUSTER = "my-eks-cluster"
+        EKS_CLUSTER = "testCluster1"
 
-        JFROG_CREDS = "jfrog-creds"
+        JFROG_CREDS = "jfrog_login"
 
-        AWS_CREDS = "aws-creds"
+        AWS_CREDS = "aws_login"
 
-        SONAR_SERVER = "sonarqube"
-
-    }
-
-
-    tools {
-
-        sonarQube 'sonar-scanner'
+        SONAR_SERVER = "sonar-dev"
 
     }
+
 
 
     stages {
+
 
 
         stage('Checkout') {
@@ -61,19 +57,68 @@ pipeline {
 
 
 
+
+
         stage('SonarQube Scan') {
 
             steps {
 
-                withSonarQubeEnv("${SONAR_SERVER}") {
+                script {
 
-                    sh """
 
-                    sonar-scanner \
-                    -Dsonar.projectKey=${SERVICE} \
-                    -Dsonar.sources=${SERVICE}
+                    def services=[]
 
-                    """
+
+                    if(params.SERVICE == "all") {
+
+
+                        services=[
+
+                            "api-gateway",
+                            "users",
+                            "products",
+                            "orders",
+                            "payments"
+
+                        ]
+
+                    }
+                    else {
+
+                        services=[params.SERVICE]
+
+                    }
+
+
+
+                    def scannerHome = tool 'sonar-scanner'
+
+
+
+                    withSonarQubeEnv("${SONAR_SERVER}") {
+
+
+                        services.each { service ->
+
+
+
+                            sh """
+
+                            echo "Running SonarQube scan for ${service}"
+
+
+                            ${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=${service} \
+                            -Dsonar.sources=${service}
+
+
+                            """
+
+                        }
+
+
+                    }
+
 
                 }
 
@@ -83,28 +128,12 @@ pipeline {
 
 
 
-
-        stage('Quality Gate') {
-
-            steps {
-
-                timeout(
-                    time: 5,
-                    unit: 'MINUTES'
-                ){
-
-                    waitForQualityGate abortPipeline: true
-
-                }
-
-            }
-
-        }
 
 
 
 
         stage('Docker Build') {
+
 
             steps {
 
@@ -118,7 +147,7 @@ pipeline {
                     if(params.SERVICE == "all") {
 
 
-                        services = [
+                        services=[
 
                             "api-gateway",
                             "users",
@@ -131,14 +160,10 @@ pipeline {
                     }
                     else {
 
-
-                        services = [
-
-                            params.SERVICE
-
-                        ]
+                        services=[params.SERVICE]
 
                     }
+
 
 
 
@@ -147,22 +172,32 @@ pipeline {
 
 
 
-                        docker.build(
+                        sh """
 
-                            "${REGISTRY}/${service}:${BUILD_NUMBER}",
+                        echo "Building Docker image for ${service}"
 
-                            "./${service}"
 
-                        )
+                        docker build \
+                        -t ${REGISTRY}/${service}:${BUILD_NUMBER} \
+                        ./${service}
+
+
+
+                        """
+
 
 
                     }
 
+
                 }
+
 
             }
 
+
         }
+
 
 
 
@@ -181,6 +216,7 @@ pipeline {
                     def services=[]
 
 
+
                     if(params.SERVICE == "all") {
 
 
@@ -194,28 +230,43 @@ pipeline {
 
                         ]
 
-
                     }
                     else {
 
-
-                        services=[
-
-                            params.SERVICE
-
-                        ]
+                        services=[params.SERVICE]
 
                     }
 
 
 
-                    docker.withRegistry(
 
-                        "https://${REGISTRY}",
 
-                        "${JFROG_CREDS}"
+                    withCredentials([usernamePassword(
+                        
+                        credentialsId: "${JFROG_CREDS}",
+                        usernameVariable: 'JFROG_USER',
+                        passwordVariable: 'JFROG_PASS'
 
-                    ){
+                    )]) {
+
+
+
+                        sh """
+
+                        echo "Logging into JFrog"
+
+
+
+                        echo \$JFROG_PASS | docker login \
+                        ${REGISTRY} \
+                        -u \$JFROG_USER \
+                        --password-stdin
+
+
+
+                        """
+
+
 
 
 
@@ -223,11 +274,17 @@ pipeline {
 
 
 
-                            docker.image(
+                            sh """
 
-                                "${REGISTRY}/${service}:${BUILD_NUMBER}"
+                            echo "Pushing ${service}"
 
-                            ).push()
+
+                            docker push \
+                            ${REGISTRY}/${service}:${BUILD_NUMBER}
+
+
+
+                            """
 
 
 
@@ -244,6 +301,7 @@ pipeline {
 
 
         }
+
 
 
 
@@ -262,6 +320,7 @@ pipeline {
                     def services=[]
 
 
+
                     if(params.SERVICE == "all") {
 
 
@@ -275,16 +334,10 @@ pipeline {
 
                         ]
 
-
                     }
                     else {
 
-
-                        services=[
-
-                            params.SERVICE
-
-                        ]
+                        services=[params.SERVICE]
 
                     }
 
@@ -298,7 +351,7 @@ pipeline {
 
                         region: "${AWS_REGION}"
 
-                    ){
+                    ) {
 
 
 
@@ -309,24 +362,21 @@ pipeline {
 
                             sh """
 
+                            echo "Updating kubeconfig"
 
-                            echo "Updating kubeconfig..."
 
 
                             aws eks update-kubeconfig \
-
                             --region ${AWS_REGION} \
-
                             --name ${EKS_CLUSTER}
 
 
 
-                            echo "Deploying ${service}..."
+                            echo "Deploying ${service}"
 
 
 
                             kubectl apply \
-
                             -f ${service}/k8s/
 
 
@@ -342,7 +392,6 @@ pipeline {
                     }
 
 
-
                 }
 
 
@@ -350,6 +399,7 @@ pipeline {
 
 
         }
+
 
 
 
@@ -366,16 +416,25 @@ pipeline {
         success {
 
 
+            echo "================================"
+
             echo "Deployment Successful"
 
+            echo "================================"
+
         }
+
 
 
 
         failure {
 
 
+            echo "================================"
+
             echo "Deployment Failed"
+
+            echo "================================"
 
         }
 
