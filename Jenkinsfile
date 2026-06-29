@@ -101,7 +101,6 @@ pipeline {
                         services.each { service ->
 
 
-
                             sh """
 
                             echo "Running SonarQube scan for ${service}"
@@ -141,6 +140,7 @@ pipeline {
                 script {
 
 
+
                     def services=[]
 
 
@@ -174,7 +174,7 @@ pipeline {
 
                         sh """
 
-                        echo "Building Docker image for ${service}"
+                        echo "Building Docker image ${service}"
 
 
                         docker build \
@@ -182,12 +182,12 @@ pipeline {
                         ./${service}
 
 
-
                         """
 
 
 
                     }
+
 
 
                 }
@@ -204,6 +204,7 @@ pipeline {
 
 
 
+
         stage('Push Docker Images To JFrog') {
 
 
@@ -213,8 +214,8 @@ pipeline {
                 script {
 
 
-                    def services=[]
 
+                    def services=[]
 
 
                     if(params.SERVICE == "all") {
@@ -241,20 +242,25 @@ pipeline {
 
 
 
-                    withCredentials([usernamePassword(
-                        
-                        credentialsId: "${JFROG_CREDS}",
-                        usernameVariable: 'JFROG_USER',
-                        passwordVariable: 'JFROG_PASS'
+                    withCredentials([
 
-                    )]) {
+                        usernamePassword(
+
+                            credentialsId: "${JFROG_CREDS}",
+
+                            usernameVariable: 'JFROG_USER',
+
+                            passwordVariable: 'JFROG_PASS'
+
+                        )
+
+                    ]) {
 
 
 
                         sh """
 
-                        echo "Logging into JFrog"
-
+                        echo "Login to JFrog"
 
 
                         echo \$JFROG_PASS | docker login \
@@ -263,9 +269,7 @@ pipeline {
                         --password-stdin
 
 
-
                         """
-
 
 
 
@@ -283,7 +287,6 @@ pipeline {
                             ${REGISTRY}/${service}:${BUILD_NUMBER}
 
 
-
                             """
 
 
@@ -291,7 +294,9 @@ pipeline {
                         }
 
 
+
                     }
+
 
 
                 }
@@ -308,6 +313,8 @@ pipeline {
 
 
 
+
+
         stage('Deploy To EKS') {
 
 
@@ -315,6 +322,7 @@ pipeline {
 
 
                 script {
+
 
 
                     def services=[]
@@ -345,18 +353,19 @@ pipeline {
 
 
 
-                    withAWS(
 
-                        credentials: "${AWS_CREDS}",
 
-                        region: "${AWS_REGION}"
+                    withCredentials([
 
-                    ) {
+                        [$class: 'AmazonWebServicesCredentialsBinding',
+
+                        credentialsId: "${AWS_CREDS}"]
+
+                    ]) {
 
 
 
                         services.each { service ->
-
 
 
 
@@ -372,13 +381,27 @@ pipeline {
 
 
 
+
+                            echo "Creating JFrog image pull secret"
+
+
+
+                            kubectl create secret docker-registry jfrog-secret \
+                            --docker-server=${REGISTRY} \
+                            --docker-username=\$JFROG_USER \
+                            --docker-password=\$JFROG_PASS \
+                            --dry-run=client -o yaml | kubectl apply -f -
+
+
+
+
+
                             echo "Deploying ${service}"
 
 
 
                             kubectl apply \
                             -f ${service}/k8s/
-
 
 
                             """
@@ -392,10 +415,13 @@ pipeline {
                     }
 
 
+
                 }
 
 
+
             }
+
 
 
         }
@@ -423,7 +449,6 @@ pipeline {
             echo "================================"
 
         }
-
 
 
 
