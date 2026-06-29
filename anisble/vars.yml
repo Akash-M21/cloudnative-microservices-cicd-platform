@@ -1,6 +1,6 @@
 aws_region: us-east-1
 
-eks_cluster: my-eks-cluster
+eks_cluster: my-eks-cluster1
 
 namespace: microservices
 
