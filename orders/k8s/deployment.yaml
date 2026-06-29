@@ -53,7 +53,7 @@ spec:
    - name: orders
 
 
-     image: hiqode01.jfrog.io/akash-docker/orders:latest
+     image: hiqode01.jfrog.io/akash-docker/orders:${BUILD_NUMBER}
 
 
 
