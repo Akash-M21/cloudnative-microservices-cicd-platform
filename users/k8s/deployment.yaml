@@ -56,7 +56,10 @@ spec:
       - name: users
 
 
-        image: hiqode01.jfrog.io/docker-local/users:${BUILD_NUMBER}
+        image: hiqode01.jfrog.io/docker-local/users:latest
+
+
+        imagePullPolicy: Always
 
 
 
