@@ -1,372 +1,386 @@
 pipeline {
 
+    agent any
 
-agent any
 
+    parameters {
 
+        choice(
+            name: 'SERVICE',
+            choices: [
+                'all',
+                'api-gateway',
+                'users',
+                'products',
+                'orders',
+                'payments'
+            ],
+            description: 'Select microservice to deploy'
+        )
 
-parameters {
+    }
 
 
-choice(
+    environment {
 
-name:'SERVICE',
+        REGISTRY = "mycompany.jfrog.io/docker-local"
 
-choices:[
+        AWS_REGION = "us-east-1"
 
-'all',
+        EKS_CLUSTER = "my-eks-cluster"
 
-'api-gateway',
+        JFROG_CREDS = "jfrog-creds"
 
-'users',
+        AWS_CREDS = "aws-creds"
 
-'products',
+        SONAR_SERVER = "sonarqube"
 
-'orders',
+    }
 
-'payments'
 
-],
+    tools {
 
-description:'Select microservice'
+        sonarQube 'sonar-scanner'
 
-)
+    }
 
 
-}
+    stages {
 
 
+        stage('Checkout') {
 
-environment {
+            steps {
 
+                git branch: 'main',
+                    url: 'https://github.com/Akash-M21/cloudnative-microservices-cicd-platform.git'
 
-REGISTRY="mycompany.jfrog.io/docker-local"
+            }
 
+        }
 
-AWS_REGION="us-east-1"
 
 
-EKS_CLUSTER="my-eks-cluster"
+        stage('SonarQube Scan') {
 
+            steps {
 
-JFROG_CREDS="jfrog-creds"
+                withSonarQubeEnv("${SONAR_SERVER}") {
 
+                    sh """
 
-}
+                    sonar-scanner \
+                    -Dsonar.projectKey=${SERVICE} \
+                    -Dsonar.sources=${SERVICE}
 
+                    """
 
+                }
 
-tools {
+            }
 
+        }
 
-sonarQube 'sonar-scanner'
 
 
-}
 
+        stage('Quality Gate') {
 
+            steps {
 
+                timeout(
+                    time: 5,
+                    unit: 'MINUTES'
+                ){
 
+                    waitForQualityGate abortPipeline: true
 
-stages {
+                }
 
+            }
 
+        }
 
-stage('Checkout') {
 
 
-steps {
 
+        stage('Docker Build') {
 
-git branch:'main',
+            steps {
 
-url:'https://github.com/Akash-M21/cloudnative-microservices-cicd-platform.git'
 
+                script {
 
-}
 
-}
+                    def services=[]
 
 
+                    if(params.SERVICE == "all") {
 
 
+                        services = [
 
-stage('SonarQube Scan') {
+                            "api-gateway",
+                            "users",
+                            "products",
+                            "orders",
+                            "payments"
 
+                        ]
 
-steps {
+                    }
+                    else {
 
 
-withSonarQubeEnv('sonarqube'){
+                        services = [
 
+                            params.SERVICE
 
-sh """
+                        ]
 
-sonar-scanner \
+                    }
 
--Dsonar.projectKey=${SERVICE} \
 
--Dsonar.sources=${SERVICE}
 
-"""
 
+                    services.each { service ->
 
-}
 
 
-}
+                        docker.build(
 
+                            "${REGISTRY}/${service}:${BUILD_NUMBER}",
 
-}
+                            "./${service}"
 
+                        )
 
 
+                    }
 
+                }
 
-stage('Quality Gate') {
+            }
 
+        }
 
-steps {
 
 
-timeout(time:5,unit:'MINUTES'){
 
 
-waitForQualityGate abortPipeline:true
 
+        stage('Push Docker Images To JFrog') {
 
-}
 
+            steps {
 
-}
 
+                script {
 
-}
 
+                    def services=[]
 
 
+                    if(params.SERVICE == "all") {
 
 
-stage('Docker Build') {
+                        services=[
 
+                            "api-gateway",
+                            "users",
+                            "products",
+                            "orders",
+                            "payments"
 
-steps {
+                        ]
 
 
-script {
+                    }
+                    else {
 
 
+                        services=[
 
-def services=[]
+                            params.SERVICE
 
+                        ]
 
-if(params.SERVICE=="all"){
+                    }
 
 
-services=[
 
-"api-gateway",
+                    docker.withRegistry(
 
-"users",
+                        "https://${REGISTRY}",
 
-"products",
+                        "${JFROG_CREDS}"
 
-"orders",
+                    ){
 
-"payments"
 
-]
 
+                        services.each { service ->
 
-}
 
-else{
 
+                            docker.image(
 
-services=[params.SERVICE]
+                                "${REGISTRY}/${service}:${BUILD_NUMBER}"
 
+                            ).push()
 
-}
 
 
+                        }
 
 
-services.each{
+                    }
 
 
-service ->
+                }
 
 
+            }
 
-docker.build(
 
-"${REGISTRY}/${service}:${BUILD_NUMBER}",
+        }
 
-"./${service}"
 
-)
 
 
-}
 
 
-}
+        stage('Deploy To EKS') {
 
 
-}
+            steps {
 
 
-}
+                script {
 
 
+                    def services=[]
 
 
+                    if(params.SERVICE == "all") {
 
-stage('Push To JFrog') {
 
+                        services=[
 
-steps {
+                            "api-gateway",
+                            "users",
+                            "products",
+                            "orders",
+                            "payments"
 
+                        ]
 
-script {
 
+                    }
+                    else {
 
 
-docker.withRegistry(
+                        services=[
 
-"https://${REGISTRY}",
+                            params.SERVICE
 
-JFROG_CREDS
+                        ]
 
-){
+                    }
 
 
 
-def services=[]
 
 
+                    withAWS(
 
-if(params.SERVICE=="all"){
+                        credentials: "${AWS_CREDS}",
 
+                        region: "${AWS_REGION}"
 
-services=[
+                    ){
 
-"api-gateway",
 
-"users",
 
-"products",
+                        services.each { service ->
 
-"orders",
 
-"payments"
 
-]
 
+                            sh """
 
-}
 
-else{
+                            echo "Updating kubeconfig..."
 
 
-services=[params.SERVICE]
+                            aws eks update-kubeconfig \
 
+                            --region ${AWS_REGION} \
 
-}
+                            --name ${EKS_CLUSTER}
 
 
 
+                            echo "Deploying ${service}..."
 
-services.each{
 
 
-service ->
+                            kubectl apply \
 
+                            -f ${service}/k8s/
 
 
-docker.image(
 
-"${REGISTRY}/${service}:${BUILD_NUMBER}"
+                            """
 
-).push()
 
 
+                        }
 
-}
 
 
+                    }
 
-}
 
 
+                }
 
-}
 
+            }
 
-}
 
+        }
 
-}
 
 
+    }
 
 
 
-stage('Deploy To EKS') {
 
 
-steps {
 
+    post {
 
-sh """
 
-aws eks update-kubeconfig \
+        success {
 
---region ${AWS_REGION} \
 
---name ${EKS_CLUSTER}
+            echo "Deployment Successful"
 
+        }
 
 
-kubectl apply \
 
--f ${SERVICE}/k8s/
+        failure {
 
 
-"""
+            echo "Deployment Failed"
 
+        }
 
-}
 
-
-}
-
-
-}
-
-
-post {
-
-
-success {
-
-
-echo "Deployment Successful"
-
-
-}
-
-
-failure {
-
-
-echo "Deployment Failed"
-
-
-}
-
-
-}
+    }
 
 
 }
