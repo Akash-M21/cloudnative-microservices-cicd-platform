@@ -56,7 +56,7 @@ spec:
       - name: users
 
 
-        image: mycompany.jfrog.io/docker-local/users:latest
+        image: hiqode01.jfrog.io/akash-docker/users:latest
 
 
 
