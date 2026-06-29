@@ -24,7 +24,7 @@ spec:
  ports:
 
 
- - port:3003
+ - port: 3003
 
 
-   targetPort:3003
+   targetPort: 3003
