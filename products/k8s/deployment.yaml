@@ -50,7 +50,7 @@ spec:
    - name: products
 
 
-     image: hiqode01.jfrog.io/akash-docker/products:latest
+     image: hiqode01.jfrog.io/akash-docker/products:${BUILD_NUMBER}
 
 
 
