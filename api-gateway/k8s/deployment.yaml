@@ -56,6 +56,9 @@ spec:
         image: hiqode01.jfrog.io/akash-docker/api-gateway:latest
 
 
+        imagePullPolicy: Always
+
+
 
         ports:
 
