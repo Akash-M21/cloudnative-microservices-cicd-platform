@@ -53,7 +53,10 @@ spec:
    - name: payments
 
 
-     image: hiqode01.jfrog.io/akash-docker/payments:${BUILD_NUMBER}
+     image: hiqode01.jfrog.io/akash-docker/payments:latest
+
+
+     imagePullPolicy: Always
 
 
 
