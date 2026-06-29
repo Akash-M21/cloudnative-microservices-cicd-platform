@@ -53,7 +53,7 @@ spec:
       - name: api-gateway
 
 
-        image: hiqode01.jfrog.io/akash-docker/api-gateway:${BUILD_NUMBER}
+        image: hiqode01.jfrog.io/akash-docker/api-gateway:latest
 
 
 
