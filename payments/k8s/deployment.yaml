@@ -53,7 +53,7 @@ spec:
    - name: payments
 
 
-     image: hiqode01.jfrog.io/akash-docker/payments:latest
+     image: hiqode01.jfrog.io/akash-docker/payments:${BUILD_NUMBER}
 
 
 
