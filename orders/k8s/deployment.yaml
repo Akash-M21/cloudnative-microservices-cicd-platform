@@ -63,4 +63,4 @@ spec:
      ports:
 
 
-     - containerPort:3003
+     - containerPort: 3003
